@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f2f1ec">
+	<title>Cube Timer</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--paper: #f2f1ec;
+			--ink: #18201d;
+			--muted: #707873;
+			--line: #d8d9d1;
+			--green: #159b62;
+			--red: #df5c45;
+			--yellow: #edc84b;
+			--blue: #397ec1;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			min-height: 100vh;
+			margin: 0;
+			background-color: var(--paper);
+			background-image: linear-gradient(rgba(24, 32, 29, .035) 1px, transparent 1px),
+				linear-gradient(90deg, rgba(24, 32, 29, .035) 1px, transparent 1px);
+			background-size: 32px 32px;
+			color: var(--ink);
+			font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+		}
+
+		main {
+			width: min(100% - 40px, 880px);
+			min-height: 100vh;
+			margin: 0 auto;
+			display: flex;
+			flex-direction: column;
+		}
+
+		header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 27px 0;
+			border-bottom: 1px solid var(--line);
+		}
+
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 11px;
+			font-size: 14px;
+			font-weight: 750;
+			letter-spacing: .02em;
+		}
+
+		.cube-mark {
+			display: grid;
+			grid-template-columns: repeat(3, 7px);
+			gap: 2px;
+			transform: rotate(-8deg);
+		}
+
+		.cube-mark i {
+			width: 7px;
+			height: 7px;
+			display: block;
+			border-radius: 1px;
+			background: var(--green);
+		}
+
+		.cube-mark i:nth-child(2), .cube-mark i:nth-child(5) { background: var(--yellow); }
+		.cube-mark i:nth-child(3), .cube-mark i:nth-child(7) { background: var(--blue); }
+		.cube-mark i:nth-child(6) { background: var(--red); }
+
+		.event-label {
+			color: var(--muted);
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: .14em;
+			text-transform: uppercase;
+		}
+
+		.timer-area {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 68px 0 84px;
+			text-align: center;
+		}
+
+		.state {
+			min-height: 24px;
+			display: flex;
+			align-items: center;
+			gap: 9px;
+			margin-bottom: 18px;
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 700;
+			letter-spacing: .12em;
+			text-transform: uppercase;
+		}
+
+		.state-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: #aab0aa;
+			transition: background-color .15s ease, box-shadow .15s ease;
+		}
+
+		.timer-area[data-state="holding"] .state-dot {
+			background: var(--yellow);
+			box-shadow: 0 0 0 4px rgba(237, 200, 75, .2);
+		}
+
+		.timer-area[data-state="running"] .state-dot {
+			background: var(--green);
+			box-shadow: 0 0 0 4px rgba(21, 155, 98, .15);
+		}
+
+		.timer-area[data-state="stopped"] .state-dot { background: var(--red); }
+
+		.timer {
+			font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+			font-size: clamp(72px, 17vw, 148px);
+			font-weight: 500;
+			line-height: 1;
+			font-variant-numeric: tabular-nums;
+			letter-spacing: 0;
+			white-space: nowrap;
+		}
+
+		.instruction {
+			min-height: 24px;
+			margin: 24px 0 0;
+			color: var(--muted);
+			font-size: 15px;
+		}
+
+		kbd {
+			display: inline-flex;
+			min-width: 73px;
+			height: 31px;
+			align-items: center;
+			justify-content: center;
+			margin: 0 3px;
+			padding: 0 9px;
+			border: 1px solid #c8cac2;
+			border-bottom-width: 3px;
+			border-radius: 4px;
+			background: rgba(255, 255, 255, .52);
+			color: var(--ink);
+			font-family: inherit;
+			font-size: 11px;
+			font-weight: 750;
+			letter-spacing: .06em;
+			vertical-align: middle;
+		}
+
+		footer {
+			display: flex;
+			justify-content: space-between;
+			gap: 20px;
+			padding: 19px 0 23px;
+			border-top: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 11px;
+		}
+
+		.hold-track {
+			width: min(240px, 70vw);
+			height: 3px;
+			margin-top: 22px;
+			overflow: hidden;
+			background: var(--line);
+			opacity: 0;
+			transition: opacity .15s ease;
+		}
+
+		.hold-track span {
+			display: block;
+			width: 0;
+			height: 100%;
+			background: var(--yellow);
+		}
+
+		.timer-area[data-state="holding"] .hold-track { opacity: 1; }
+
+		@media (max-width: 520px) {
+			main { width: min(100% - 32px, 880px); }
+			header { padding: 21px 0; }
+			.event-label { font-size: 9px; }
+			footer { font-size: 10px; }
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<header>
+			<div class="brand">
+				<span class="cube-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+				<span>Cube Timer</span>
+			</div>
+			<span class="event-label">3 × 3 × 3 · Solve</span>
+		</header>
+
+		<section class="timer-area" id="timer-area" data-state="ready" aria-live="polite">
+			<div class="state"><span class="state-dot" aria-hidden="true"></span><span id="state-label">Ready</span></div>
+			<div class="timer" id="timer" role="timer" aria-label="Elapsed time">0.00</div>
+			<p class="instruction" id="instruction">Hold <kbd>SPACE</kbd> for 1 second, then release to start</p>
+			<div class="hold-track" aria-hidden="true"><span id="hold-progress"></span></div>
+		</section>
+
+		<footer>
+			<span>Ready when you are.</span>
+			<span>SPACE to stop</span>
+		</footer>
+	</main>
+
+	<script>
+		const timerArea = document.querySelector("#timer-area");
+		const timerDisplay = document.querySelector("#timer");
+		const stateLabel = document.querySelector("#state-label");
+		const instruction = document.querySelector("#instruction");
+		const holdProgress = document.querySelector("#hold-progress");
+		const holdThreshold = 1000;
+
+		let spaceDownAt = null;
+		let holdFrame = null;
+		let runStartedAt = null;
+		let stateBeforeHold = "ready";
+		let state = "ready";
+
+		function setState(nextState, label, message) {
+			state = nextState;
+			timerArea.dataset.state = nextState;
+			stateLabel.textContent = label;
+			instruction.textContent = message;
+		}
+
+		function formatTime(milliseconds) {
+			const totalSeconds = milliseconds / 1000;
+			if (totalSeconds < 60) return totalSeconds.toFixed(2);
+			const minutes = Math.floor(totalSeconds / 60);
+			const seconds = (totalSeconds % 60).toFixed(2).padStart(5, "0");
+			return `${minutes}:${seconds}`;
+		}
+
+		function renderTimer() {
+			if (state === "running") {
+				timerDisplay.textContent = formatTime(performance.now() - runStartedAt);
+				requestAnimationFrame(renderTimer);
+			}
+		}
+
+		function renderHoldProgress() {
+			if (spaceDownAt === null || state !== "holding") return;
+			const progress = Math.min((performance.now() - spaceDownAt) / holdThreshold, 1);
+			holdProgress.style.width = `${progress * 100}%`;
+			if (progress < 1) holdFrame = requestAnimationFrame(renderHoldProgress);
+		}
+
+		document.addEventListener("keydown", (event) => {
+			if (event.code !== "Space" || event.repeat) return;
+			event.preventDefault();
+
+			if (state === "running") {
+				timerDisplay.textContent = formatTime(performance.now() - runStartedAt);
+				runStartedAt = null;
+				setState("stopped", "Stopped", "Hold SPACE for 1 second, then release to start again");
+				return;
+			}
+
+			stateBeforeHold = state;
+			spaceDownAt = performance.now();
+			holdProgress.style.width = "0%";
+			setState("holding", "Hold to start", "Keep holding SPACE for 1 second");
+			holdFrame = requestAnimationFrame(renderHoldProgress);
+		});
+
+		document.addEventListener("keyup", (event) => {
+			if (event.code !== "Space" || spaceDownAt === null) return;
+			event.preventDefault();
+
+			const heldFor = performance.now() - spaceDownAt;
+			spaceDownAt = null;
+			cancelAnimationFrame(holdFrame);
+			holdProgress.style.width = "0%";
+
+			if (heldFor >= holdThreshold) {
+				timerDisplay.textContent = "0.00";
+				runStartedAt = performance.now();
+				setState("running", "Running", "Press SPACE to stop");
+				requestAnimationFrame(renderTimer);
+			} else {
+				const wasStopped = stateBeforeHold === "stopped";
+				setState(wasStopped ? "stopped" : "ready", wasStopped ? "Stopped" : "Ready",
+					wasStopped ? "Hold SPACE for 1 second, then release to start again" :
+						"Hold SPACE for 1 second, then release to start");
+			}
+		});
+
+		window.addEventListener("blur", () => {
+			if (spaceDownAt !== null) {
+				spaceDownAt = null;
+				cancelAnimationFrame(holdFrame);
+				holdProgress.style.width = "0%";
+				const wasStopped = stateBeforeHold === "stopped";
+				setState(wasStopped ? "stopped" : "ready", wasStopped ? "Stopped" : "Ready",
+					wasStopped ? "Hold SPACE for 1 second, then release to start again" :
+						"Hold SPACE for 1 second, then release to start");
+			}
+		});
+	</script>
+</body>
+</html>
